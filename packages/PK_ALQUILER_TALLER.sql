@@ -7,7 +7,7 @@
 CREATE OR REPLACE PACKAGE PK_RESERVAS_TALLER AS 
    --Declaración del tipo registro con los datos básicos de un cliente
    TYPE gtr_cliente IS RECORD(
-     k_nit          cliente.k_nit,
+     k_nit          cliente.k_nit%TYPE,
      n_nomcliente   cliente.n_nomcliente%TYPE,
      n_apecliente   cliente.n_apecliente%TYPE
      );
@@ -29,7 +29,7 @@ CREATE OR REPLACE PACKAGE PK_RESERVAS_TALLER AS
     PROCEDURE PR_BUSCAR_CLIENTE(pk_nit        IN cliente.k_nit%TYPE,
                                   pr_cliente  OUT gtr_cliente,
                                   pc_error    OUT NUMBER,
-                                  pm_error    OUT VARCHAR2(10));
+                                  pm_error    OUT VARCHAR2);
                                   
      /*------------------------------------------------------------------------------
      Función para buscar el nombre del cliente
@@ -57,8 +57,19 @@ CREATE OR REPLACE PACKAGE PK_RESERVAS_TALLER AS
    */
    PROCEDURE PR_LISTAR_RESERVAS(pk_nit IN cliente.k_nit%TYPE, pc_error OUT NUMBER, pm_error OUT VARCHAR);
    
-   /* TODO Elaborar la documentación del procedimiento y completar el encabezado para validar si
-      un vehículo está disponible para reservar en una fecha dada*/
-   FUNCTION FU_VEHICULO_DISPONIBLE  RETURN BOOLEAN
+    /*-----------------------------------------------------------------------------------------
+     Función que determina  si un vehículo está disponible para reserva en una fecha dada.
+
+     Parametros de Entrada: pk_matricula    Número de matrícula del vehículo solicitado
+     						pf_reserva		Fecha para la que se solicita saber la consulta.
+     Parametros de Salida:  
+                            pc_error       = 1 si no existe el vehículo,
+                                             0, en caso contrario
+                            pm_error         Mensaje de error si hay error o null en caso contrario
+   */
+    FUNCTION FU_VEHICULO_DISPONIBLE (pk_matricula vehiculo.k_matricula%TYPE,
+   									pf_reserva date,
+   									pc_error OUT NUMBER, 
+   		 						 	pm_error OUT VARCHAR)  RETURN BOOLEAN;
 
 END PK_RESERVAS_TALLER;

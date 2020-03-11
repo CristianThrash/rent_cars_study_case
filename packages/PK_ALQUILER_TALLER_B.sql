@@ -17,16 +17,18 @@ CREATE OR REPLACE PACKAGE BODY PK_RESERVAS_TALLER AS
     PROCEDURE PR_BUSCAR_CLIENTE(pk_nit      IN cliente.k_nit%TYPE,
                                 pr_cliente  OUT gtr_cliente,
                                 pc_error    OUT NUMBER,
-                                pm_error    OUT VARCHAR2(10))
+                                pm_error    OUT VARCHAR2)
     AS
+    BEGIN
     	SELECT k_nit, n_nomcliente, n_apecliente INTO pr_cliente
+        FROM cliente
     	WHERE k_nit=pk_nit;
     	pc_error := 0;
     	pm_error := null;
     EXCEPTION
-    	WHEN NOT_DATA_FOUND THEN
+    	WHEN NO_DATA_FOUND THEN
     		pc_error:= 1;
-    		pm_error:= 'Cliente solicitado no se encuentra, intente más tarde';
+    		pm_error:= 'Cliente no encontrado, intente más tarde';
     END PR_BUSCAR_CLIENTE;
 
      /*------------------------------------------------------------------------------
@@ -40,17 +42,20 @@ CREATE OR REPLACE PACKAGE BODY PK_RESERVAS_TALLER AS
     FUNCTION FU_BUSCAR_CLIENTE(pk_nit        IN cliente.k_nit%TYPE,
                                pc_error    OUT NUMBER,
                                pm_error    OUT VARCHAR2) RETURN VARCHAR
-    l_nomcompleto VARCHAR(60);
     AS
+        l_nomcompleto VARCHAR(60);
+    BEGIN
     	SELECT n_nomcliente||' '||n_apecliente INTO l_nomcompleto
+        FROM cliente
     	WHERE k_nit=pk_nit;
     	pc_error := 0;
     	pm_error := null;
     	RETURN l_nomcompleto;
     EXCEPTION
-    	WHEN NOT_DATA_FOUND THEN
+    	WHEN NO_DATA_FOUND THEN
     		pc_error := 1;
-    		pm_error := 'Cliente solicitado no se encuentra, intente más tarde'; 	
+    		pm_error := 'Cliente no encontrado, intente más tarde';
+            RETURN null;	
     END FU_BUSCAR_CLIENTE;
                                   
     /*-----------------------------------------------------------------------------------------
@@ -68,27 +73,30 @@ CREATE OR REPLACE PACKAGE BODY PK_RESERVAS_TALLER AS
     PROCEDURE PR_LISTAR_RESERVAS(pk_nit IN cliente.k_nit%TYPE, 
    		   						 pc_error OUT NUMBER, 
    		 						 pm_error OUT VARCHAR)
-    lk_reserva reserva.k_reserva%TYPE;
-    lc_error NUMBER;
-    lm_error VARCHAR(50);
-    CURSOR C_RESERVAS IS
-    	SELECT k_reserva, f_reserva, v_total
-    	WHERE k_nit = pk_nit;
-
-    CURSOR C_VEHICULOS IS
-    	SELECT k_matricula, f_inicio, f_fin, i_entregado
-    	WHERE k_reserva = lk_reserva;
     AS
+        lk_reserva reserva.k_reserva%TYPE;
+        EX_NOT_FOUND EXCEPTION;
+        lc_error NUMBER;
+        lm_error VARCHAR(50);
+        CURSOR C_RESERVAS IS
+        	SELECT k_reserva, f_reserva, v_total
+            FROM reserva
+        	WHERE k_nit = pk_nit;
+        CURSOR C_VEHICULOS IS
+            SELECT k_matricula, f_inicio, f_fin, i_entregado
+            FROM RESERVA_VEHICULO
+            WHERE k_reserva = lk_reserva;
+    BEGIN
     	PR_BUSCAR_CLIENTE(pk_nit, gr_cliente, lc_error,lm_error);
     	IF lc_error<>0 THEN
     		RAISE EX_NOT_FOUND;
     	END IF;
-    	DBMS_OUT.PUT_LINE(gr_cliente.k_nit||' '||gr_cliente.n_nomcliente||' '||gr_cliente.n_apecliente)
+    	DBMS_OUTPUT.PUT_LINE(gr_cliente.k_nit||' '||gr_cliente.n_nomcliente||' '||gr_cliente.n_apecliente);
     	FOR  RC_RESERVA IN C_RESERVAS LOOP
-    		DBMS_OUT.PUT_LINE(RC_RESERVA.k_reserva||' '||RC_RESERVA.f_reserva||' '||RC_RESERVA.v_total);
-    		lk_reserva = RC_RESERVA.k_reserva;
+    		DBMS_OUTPUT.PUT_LINE(RC_RESERVA.k_reserva||' '||RC_RESERVA.f_reserva||' '||RC_RESERVA.v_total);
+    		lk_reserva := RC_RESERVA.k_reserva;
     		FOR  RC_VEHICULO IN C_VEHICULOS LOOP
-    			DBMS_OUT.PUT_LINE(RC_VEHICULO.k_matricula||' '||RC_VEHICULO.f_inicio||' '||RC_VEHICULO.f_fin||' '||RC_VEHICULO.i_entregado);
+    			DBMS_OUTPUT.PUT_LINE(RC_VEHICULO.k_matricula||' '||RC_VEHICULO.f_inicio||' '||RC_VEHICULO.f_fin||' '||RC_VEHICULO.i_entregado);
     		END LOOP;
     	END LOOP;
     EXCEPTION
@@ -111,17 +119,18 @@ CREATE OR REPLACE PACKAGE BODY PK_RESERVAS_TALLER AS
    									pf_reserva date,
    									pc_error OUT NUMBER, 
    		 						 	pm_error OUT VARCHAR)  RETURN BOOLEAN
-    CURSOR C_VEHICULOS IS
-    	SELECT f_inicio,f_fin 
-    	FROM RESERVA_VEHICULO
-    	WHERE k_matricula = pk_matricula; 
     AS
+        CURSOR C_VEHICULOS IS
+        	SELECT f_inicio,f_fin 
+        	FROM RESERVA_VEHICULO
+        	WHERE k_matricula = pk_matricula; 
+    BEGIN
     	FOR RC_VEHICULO IN C_VEHICULOS LOOP
     		IF RC_VEHICULO.f_inicio<=pf_reserva AND RC_VEHICULO.f_fin>=pf_reserva THEN
     			RETURN FALSE;
     		END IF;
     	END LOOP;
     	RETURN TRUE;
-    END FU_VEHICULO_DISPONIBLE
+    END FU_VEHICULO_DISPONIBLE;
 	
 END PK_RESERVAS_TALLER;
